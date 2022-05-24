@@ -19,8 +19,10 @@ year={2020}
 
 
 class UNetRes(nn.Module):
-    def __init__(self, in_nc=3, out_nc=3, nc=[64, 128, 256, 512], nb=4, act_mode='R', downsample_mode='strideconv', upsample_mode='convtranspose', bias=True):
+    def __init__(self, noise_map, in_nc=3, out_nc=3, nc=[64, 128, 256, 512], nb=4, act_mode='R', downsample_mode='strideconv', upsample_mode='convtranspose', bias=True):
         super(UNetRes, self).__init__()
+
+        self.noise_map = noise_map
 
         self.m_head = B.conv(in_nc, nc[0], bias=bias, mode='C')
 
@@ -57,12 +59,14 @@ class UNetRes(nn.Module):
         self.m_tail = B.conv(nc[0], out_nc, bias=bias, mode='C')
 
     def forward(self, x0):
-#        h, w = x.size()[-2:]
-#        paddingBottom = int(np.ceil(h/8)*8-h)
-#        paddingRight = int(np.ceil(w/8)*8-w)
-#        x = nn.ReplicationPad2d((0, paddingRight, 0, paddingBottom))(x)
+        #h, w = x.size()[-2:]
+        #paddingBottom = int(np.ceil(h/8)*8-h)
+        #paddingRight = int(np.ceil(w/8)*8-w)
+        #x = nn.ReplicationPad2d((0, paddingRight, 0, paddingBottom))(x)
+        m = self.noise_map.repeat(1, 1, x0.size()[-2], x0.size()[-1]).type_as(x0).to(x0.get_device())
+        x0n = torch.cat((x0, m), dim=1)
 
-        x1 = self.m_head(x0)
+        x1 = self.m_head(x0n)
         x2 = self.m_down1(x1)
         x3 = self.m_down2(x2)
         x4 = self.m_down3(x3)
@@ -71,7 +75,7 @@ class UNetRes(nn.Module):
         x = self.m_up2(x+x3)
         x = self.m_up1(x+x2)
         x = self.m_tail(x+x1)
-#        x = x[..., :h, :w]
+        #x = x[..., :h, :w]
 
         return x
 

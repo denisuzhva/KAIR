@@ -1,4 +1,5 @@
 
+import torch
 import torch.nn as nn
 import models.basicblock as B
 
@@ -126,7 +127,7 @@ class IRCNN(nn.Module):
 # may need more training time, but will not reduce the final PSNR too much.
 # --------------------------------------------
 class FDnCNN(nn.Module):
-    def __init__(self, in_nc=2, out_nc=1, nc=64, nb=20, act_mode='R'):
+    def __init__(self, noise_map, in_nc=2, out_nc=1, nc=64, nb=20, act_mode='R'):
         """
         in_nc: channel number of input
         out_nc: channel number of output
@@ -143,8 +144,11 @@ class FDnCNN(nn.Module):
         m_tail = B.conv(nc, out_nc, mode='C', bias=bias)
 
         self.model = B.sequential(m_head, *m_body, m_tail)
+        self.noise_map = noise_map
 
     def forward(self, x):
+        m = self.noise_map.repeat(1, 1, x.size()[-2], x.size()[-1]).type_as(x).to(x.get_device())
+        x = torch.cat((x, m), dim=1)
         x = self.model(x)
         return x
 
