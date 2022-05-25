@@ -25,7 +25,7 @@ Reference:
 # FFDNet
 # --------------------------------------------
 class FFDNet(nn.Module):
-    def __init__(self, noise_map, in_nc=1, out_nc=1, nc=64, nb=15, act_mode='R'):
+    def __init__(self, noise_level, in_nc=1, out_nc=1, nc=64, nb=15, act_mode='R'):
         """
         # ------------------------------------
         in_nc: channel number of input
@@ -48,7 +48,7 @@ class FFDNet(nn.Module):
         m_tail = B.conv(nc, out_nc*sf*sf, mode='C', bias=bias)
 
         self.model = B.sequential(m_head, *m_body, m_tail)
-        self.noise_map = noise_map
+        self.noise_level = noise_level
 
         self.m_up = nn.PixelShuffle(upscale_factor=sf)
 
@@ -61,7 +61,8 @@ class FFDNet(nn.Module):
 
         x = self.m_down(x)
         # m = torch.ones(sigma.size()[0], sigma.size()[1], x.size()[-2], x.size()[-1]).type_as(x).mul(sigma)
-        m = self.noise_map.repeat(1, 1, x.size()[-2], x.size()[-1]).type_as(x).to(x.get_device())
+        noise_map = torch.full((1, 1, 1, 1), self.noise_level/255.)
+        m = noise_map.repeat(x.size()[0], 1, x.size()[-2], x.size()[-1]).type_as(x).to(x.get_device())
         x = torch.cat((x, m), 1)
         x = self.model(x)
         x = self.m_up(x)

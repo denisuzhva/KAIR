@@ -19,10 +19,10 @@ year={2020}
 
 
 class UNetRes(nn.Module):
-    def __init__(self, noise_map, in_nc=3, out_nc=3, nc=[64, 128, 256, 512], nb=4, act_mode='R', downsample_mode='strideconv', upsample_mode='convtranspose', bias=True):
+    def __init__(self, noise_level, in_nc=3, out_nc=3, nc=[64, 128, 256, 512], nb=4, act_mode='R', downsample_mode='strideconv', upsample_mode='convtranspose', bias=True):
         super(UNetRes, self).__init__()
 
-        self.noise_map = noise_map
+        self.noise_level = noise_level
 
         self.m_head = B.conv(in_nc, nc[0], bias=bias, mode='C')
 
@@ -63,7 +63,8 @@ class UNetRes(nn.Module):
         #paddingBottom = int(np.ceil(h/8)*8-h)
         #paddingRight = int(np.ceil(w/8)*8-w)
         #x = nn.ReplicationPad2d((0, paddingRight, 0, paddingBottom))(x)
-        m = self.noise_map.repeat(1, 1, x0.size()[-2], x0.size()[-1]).type_as(x0).to(x0.get_device())
+        noise_map = torch.full((1, 1, 1, 1), self.noise_level/255.)
+        m = noise_map.repeat(x0.size()[0], 1, x0.size()[-2], x0.size()[-1]).type_as(x0).to(x0.get_device())
         x0n = torch.cat((x0, m), dim=1)
 
         x1 = self.m_head(x0n)
